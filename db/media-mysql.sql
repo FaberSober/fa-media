@@ -15,8 +15,8 @@ CREATE TABLE `media_video` (
     `origin_size_mb`         DECIMAL(12,2)    NOT NULL DEFAULT 0.00 COMMENT '原始视频大小（MB）',
     
     -- 720p 转码视频
-    `trans_720p_file_id`    VARCHAR(32)      DEFAULT NULL COMMENT '720p转码视频文件ID -> base_file_save.id',
-    `trans_720p_size_mb`     DECIMAL(12,2)    DEFAULT 0.00 COMMENT '720p视频大小（MB）',
+    `trans720p_file_id`    VARCHAR(32)      DEFAULT NULL COMMENT '720p转码视频文件ID -> base_file_save.id',
+    `trans720p_size_mb`     DECIMAL(12,2)    DEFAULT 0.00 COMMENT '720p视频大小（MB）',
     
     -- 封面图
     `cover_file_id`         VARCHAR(32)      DEFAULT NULL COMMENT '封面图文件ID -> base_file_save.id',
