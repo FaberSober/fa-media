@@ -8,6 +8,8 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import com.faber.core.annotation.FaModalName;
 import com.faber.core.annotation.SqlEquals;
 import com.faber.core.bean.BaseDelEntity;
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -68,6 +70,24 @@ public class MediaVideo extends BaseDelEntity {
 
     @ExcelProperty("720p视频大小（MB）")
     private BigDecimal trans720pSizeMb;
+
+    @ExcelProperty("720p转码进度百分比（0-100，0表示未开始，100表示完成）")
+    private Integer trans720pProgress;
+
+    @SqlEquals
+    @ExcelProperty("720p转码详细状态：0=未开始,1=转码中,2=成功,3=失败,4=已取消")
+    private Integer trans720pStatus;
+
+    @ExcelProperty("720p转码失败或警告的详细信息（如错误日志）")
+    private String trans720pMessage;
+
+    @ExcelProperty("720p转码开始时间")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date trans720pStartTime;
+
+    @ExcelProperty("720p转码结束时间")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date trans720pEndTime;
 
     @SqlEquals
     @ExcelProperty("封面图文件ID -> base_file_save.id")

@@ -1,7 +1,13 @@
 package com.faber.api.media.video.utils;
 
+import java.nio.file.Path;
+
 import com.faber.api.media.video.vo.meta.VideoMetaInfo;
 import com.github.kokorin.jaffree.StreamType;
+import com.github.kokorin.jaffree.ffmpeg.FFmpeg;
+import com.github.kokorin.jaffree.ffmpeg.ProgressListener;
+import com.github.kokorin.jaffree.ffmpeg.UrlInput;
+import com.github.kokorin.jaffree.ffmpeg.UrlOutput;
 import com.github.kokorin.jaffree.ffprobe.FFprobe;
 import com.github.kokorin.jaffree.ffprobe.FFprobeResult;
 import com.github.kokorin.jaffree.ffprobe.Format;
@@ -58,8 +64,30 @@ public class FaMediaUtils {
         return info;
     }
 
-    public static void compressVideo(String videoUrl, String outputFilePath) {
-        
+    /**
+     * 压缩视频到720P分辨率
+     * @param videoUrl 视频URL（需带签名参数）
+     * @param outputFilePath 输出文件路径
+     */
+    public static void compressVideo720(String videoUrl, String outputFilePath, ProgressListener progressListener) {
+        FFmpeg.atPath()
+            .addInput(UrlInput.fromUrl(videoUrl)) // 直接使用视频 URL
+            .addOutput(UrlOutput.toUrl(outputFilePath))
+            // 限制线程，防止占满服务器 CPU
+            // .addArguments("-threads", "2")
+            // 视频编码优化 (720p, 24fps)
+            .addArguments("-c:v", "libx264")
+            .addArguments("-crf", "26")
+            .addArguments("-vf", "scale=1280:-2,fps=24")
+            .addArguments("-pix_fmt", "yuv420p")
+            // 开启快启模式，方便 uniapp 播放
+            .addArguments("-movflags", "+faststart")
+            // 音频优化
+            .addArguments("-c:a", "aac")
+            .addArguments("-b:a", "128k")
+            .setOverwriteOutput(true)
+            .setProgressListener(progressListener)
+            .execute();
     }
     
 }

@@ -17,6 +17,11 @@ CREATE TABLE `media_video` (
     -- 720p 转码视频
     `trans720p_file_id`    VARCHAR(32)      DEFAULT NULL COMMENT '720p转码视频文件ID -> base_file_save.id',
     `trans720p_size_mb`     DECIMAL(12,2)    DEFAULT 0.00 COMMENT '720p视频大小（MB）',
+    `trans720p_progress`    TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '720p转码进度百分比（0-100）',
+    `trans720p_status`      TINYINT          NOT NULL DEFAULT 0 COMMENT '720p转码详细状态：0=未开始,1=转码中,2=成功,3=失败,4=已取消',
+    `trans720p_message`     VARCHAR(255)     DEFAULT NULL COMMENT '720p转码失败或警告的详细信息',
+    `trans720p_start_time`  TIMESTAMP        NULL DEFAULT NULL COMMENT '720p转码开始时间',
+    `trans720p_end_time`    TIMESTAMP        NULL DEFAULT NULL COMMENT '720p转码结束时间',
     
     -- 封面图
     `cover_file_id`         VARCHAR(32)      DEFAULT NULL COMMENT '封面图文件ID -> base_file_save.id',
