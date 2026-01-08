@@ -68,6 +68,19 @@ public class MediaVideoBiz extends BaseBiz<MediaVideoMapper,MediaVideo> {
         mediaVideo.setStatus(1);
         mediaVideo.setAuditStatus(0);
 
+        // 获取封面图
+        try {
+            String dirPath = FaFileUtils.getAbsolutePath() + "/media/cover/" + fileOrigin.getId() + "/";
+            FileUtil.mkdir(dirPath);
+            String coverPath = dirPath + "cover.jpg";
+            FaMediaUtils.extractThumbnail(fileOrigin.getUrl(), coverPath, 1);
+
+            FileSave coverFile = fileSaveBiz.upload(new File(coverPath));
+            mediaVideo.setCoverFileId(coverFile.getId());
+        } catch (Exception e) {
+            log.error(StrUtil.format("视频封面图提取失败，视频ID：{}，错误信息：{}", fileOrigin.getId(), e.getMessage()), e);
+        }
+
         this.save(mediaVideo);
 
         return mediaVideo;

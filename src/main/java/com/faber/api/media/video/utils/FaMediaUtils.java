@@ -1,8 +1,10 @@
 package com.faber.api.media.video.utils;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import com.faber.api.media.video.vo.meta.VideoMetaInfo;
+import com.github.kokorin.jaffree.LogLevel;
 import com.github.kokorin.jaffree.StreamType;
 import com.github.kokorin.jaffree.ffmpeg.FFmpeg;
 import com.github.kokorin.jaffree.ffmpeg.ProgressListener;
@@ -89,5 +91,30 @@ public class FaMediaUtils {
             .setProgressListener(progressListener)
             .execute();
     }
-    
+
+    /**
+     * 从视频 URL 提取封面图（thumbnail）
+     * @param videoUrl 视频的远程 URL，例如 "https://example.com/video.mp4"
+     * @param thumbnailPath 输出封面图路径，例如 "/path/to/cover.jpg"
+     * @param seekTime 提取帧的时间点（秒），推荐 1-10 秒，避免黑屏开头
+     */
+    public static void extractThumbnail(String videoUrl, String thumbnailPath, long seekTime) {
+        FFmpeg.atPath()  // FFmpeg 可执行文件路径，如果在 PATH 中可省略
+            .addInput(
+                UrlInput.fromUrl(videoUrl)
+                    .setPosition(seekTime * 1000)  // -ss 参数：seek 到指定毫秒（放在输入前更高效）
+            )
+            .addOutput(
+                UrlOutput.toPath(Paths.get(thumbnailPath))
+                    .setFrameCount(StreamType.VIDEO, 1L)              // 只输出 1 帧 (-frames:v 1)
+                    // .disableAudio()                // 无音频 (-an)
+                    // .disableSubtitle()             // 无字幕
+                    // .setVideoCodec("mjpeg")        // 输出为 JPEG
+                    .setFormat("image2")           // 图像格式
+            )
+            .setOverwriteOutput(true)             // 覆盖已有文件
+            .setLogLevel(LogLevel.INFO)           // 可选：设置日志级别
+            .execute();                           // 执行 FFmpeg 命令
+    }
+
 }
