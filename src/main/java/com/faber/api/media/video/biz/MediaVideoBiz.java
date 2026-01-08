@@ -3,6 +3,7 @@ package com.faber.api.media.video.biz;
 import java.io.File;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
@@ -15,6 +16,7 @@ import com.faber.api.media.video.entity.MediaVideo;
 import com.faber.api.media.video.mapper.MediaVideoMapper;
 import com.faber.api.media.video.utils.FaMediaUtils;
 import com.faber.api.media.video.vo.meta.VideoMetaInfo;
+import com.faber.config.websocket.WsHolder;
 import com.faber.core.context.BaseContextHandler;
 import com.faber.core.exception.NoDataException;
 import com.faber.core.utils.FaFileUtils;
@@ -97,9 +99,11 @@ public class MediaVideoBiz extends BaseBiz<MediaVideoMapper,MediaVideo> {
         Map<String, Object> holdMap = BaseContextHandler.getHoldMap();
         executor.execute(() -> {
             // 线程中执行
+            BaseContextHandler.setHoldMap(holdMap);
+            WsHolder.setChannel("MediaCompressVideo");
+            String userId = getCurrentUserId();
             String video720pPath = null;
             try {
-                BaseContextHandler.setHoldMap(holdMap);
 
                 this.lambdaUpdate()
                     .set(MediaVideo::getTrans720pStartTime, new Date())
@@ -113,17 +117,28 @@ public class MediaVideoBiz extends BaseBiz<MediaVideoMapper,MediaVideo> {
                 FileUtil.mkdir(dirPath);
                 String filename = mediaVideo.getOriginFilename().substring(0, mediaVideo.getOriginFilename().lastIndexOf("."));
                 video720pPath = dirPath + filename + "_720p.mp4";
+                int[] prePer = {0};
                 FaMediaUtils.compressVideo720(fileOrigin.getUrl(), video720pPath, progress -> {
                     // 进度处理逻辑
                     try {
                         double progressPercent = (double) progress.getTimeMillis() / (mediaVideo.getOriginDuration() * 1000) * 100;
+                        progressPercent = progressPercent > 100 ? 100 : progressPercent;
                         log.debug(StrUtil.format("视频压缩进度（ID：{}）：{}/{} ms ({}%)", id, progress.getTimeMillis(), mediaVideo.getOriginDuration() * 1000, progressPercent));
-                        this.lambdaUpdate()
-                            .set(MediaVideo::getTrans720pProgress, (int) progressPercent)
-                            .eq(MediaVideo::getId, mediaVideo.getId())
-                            .update();
+                        if ((int)progressPercent > prePer[0]) {
+                            prePer[0] = (int)progressPercent;
+                            this.lambdaUpdate()
+                                .set(MediaVideo::getTrans720pProgress, (int) progressPercent)
+                                .eq(MediaVideo::getId, mediaVideo.getId())
+                                .update();
+                            // send ws msg
+                            Map<String, Object> wsMsg = new HashMap<>();
+                            wsMsg.put("id", id);
+                            wsMsg.put("trans720pStatus", 1);
+                            wsMsg.put("trans720pProgress", (int) progressPercent);
+                            WsHolder.sendMessageWithChannel(userId, "MEDIA_COMPRESS_VIDEO", "MediaCompressVideo", wsMsg);
+                        }
                     } catch (Exception e) {
-                        log.error(StrUtil.format("视频压缩进度处理失败（ID：{}）：{}", id, e.getMessage()), e);
+                        // log.error(StrUtil.format("视频压缩进度处理失败（ID：{}）：{}", id, e.getMessage()), e);
                     }
                 });
 
@@ -138,6 +153,14 @@ public class MediaVideoBiz extends BaseBiz<MediaVideoMapper,MediaVideo> {
                     .set(MediaVideo::getTrans720pStatus, 2) // 2-成功
                     .eq(MediaVideo::getId, mediaVideo.getId())
                     .update();
+
+                // send ws msg
+                Map<String, Object> wsMsg = new HashMap<>();
+                wsMsg.put("id", id);
+                wsMsg.put("trans720pStatus", 2);
+                wsMsg.put("trans720pProgress", 100);
+                wsMsg.put("trans720pFileId", fileSave.getId());
+                WsHolder.sendMessage(userId, "MEDIA_COMPRESS_VIDEO", wsMsg);
             } catch (Exception e) {
                 log.error(StrUtil.format("视频压缩任务启动失败，ID：{}，错误信息：{}", id, e.getMessage()), e);
                 this.lambdaUpdate()
