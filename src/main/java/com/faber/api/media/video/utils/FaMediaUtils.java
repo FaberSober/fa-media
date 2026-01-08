@@ -93,6 +93,37 @@ public class FaMediaUtils {
     }
 
     /**
+     * 抽取视频前10秒作为鼠标悬浮预览短MP4
+     * @param videoPath 源视频
+     * @param outputFilePath 输出预览MP4路径，例如 "/tmp/preview.mp4"
+     */
+    public static void extractVideoPreview(String videoPath, String outputFilePath) {
+        FFmpeg.atPath()
+                .addInput(
+                    UrlInput.fromUrl(videoPath)
+                        .setPosition(0)  // 从第0秒开始
+                        .setDuration(10 * 1000)  // 持续10秒（毫秒）
+                )
+                .addOutput(UrlOutput.toUrl(outputFilePath))
+                // 限制 CPU 使用
+                .addArguments("-threads", "2")
+                
+                // 视频参数优化
+                .addArguments("-c:v", "libx264")
+                .addArguments("-crf", "30")          // 预览图不需要极高画质，30 可以在保持清晰的同时极大减小体积
+                .addArguments("-preset", "faster")   // 提高处理速度
+                .addArguments("-vf", "scale=480:-2,fps=15") // 降低帧率到15帧，预览够用了
+                .addArguments("-pix_fmt", "yuv420p") // 保证手机端兼容性
+                
+                // 预览图关键：静音 + 快启
+                .addArgument("-an")                 // 移除音频，减少约 15% 的体积
+                .addArguments("-movflags", "+faststart") // 必须加！让预览视频在 uniapp 里实现秒开
+                
+                .setOverwriteOutput(true)
+                .execute();
+    }
+
+    /**
      * 从视频 URL 提取封面图（thumbnail）
      * @param videoUrl 视频的远程 URL，例如 "https://example.com/video.mp4"
      * @param thumbnailPath 输出封面图路径，例如 "/path/to/cover.jpg"

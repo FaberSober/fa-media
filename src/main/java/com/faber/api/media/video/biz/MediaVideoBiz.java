@@ -97,6 +97,7 @@ public class MediaVideoBiz extends BaseBiz<MediaVideoMapper,MediaVideo> {
         Map<String, Object> holdMap = BaseContextHandler.getHoldMap();
         executor.execute(() -> {
             // 线程中执行
+            String video720pPath = null;
             try {
                 BaseContextHandler.setHoldMap(holdMap);
 
@@ -111,8 +112,8 @@ public class MediaVideoBiz extends BaseBiz<MediaVideoMapper,MediaVideo> {
                 String dirPath = FaFileUtils.getAbsolutePath() + "/media/compress/" + mediaVideo.getId() + "/";
                 FileUtil.mkdir(dirPath);
                 String filename = mediaVideo.getOriginFilename().substring(0, mediaVideo.getOriginFilename().lastIndexOf("."));
-                String outputFilePath = dirPath + filename + "_720p.mp4";
-                FaMediaUtils.compressVideo720(fileOrigin.getUrl(), outputFilePath, progress -> {
+                video720pPath = dirPath + filename + "_720p.mp4";
+                FaMediaUtils.compressVideo720(fileOrigin.getUrl(), video720pPath, progress -> {
                     // 进度处理逻辑
                     try {
                         double progressPercent = (double) progress.getTimeMillis() / (mediaVideo.getOriginDuration() * 1000) * 100;
@@ -127,7 +128,7 @@ public class MediaVideoBiz extends BaseBiz<MediaVideoMapper,MediaVideo> {
                 });
 
                 // 保存压缩后的视频文件记录
-                FileSave fileSave = fileSaveBiz.upload(new File(outputFilePath));
+                FileSave fileSave = fileSaveBiz.upload(new File(video720pPath));
 
                 this.lambdaUpdate()
                     .set(MediaVideo::getTrans720pFileId, fileSave.getId())
@@ -144,6 +145,36 @@ public class MediaVideoBiz extends BaseBiz<MediaVideoMapper,MediaVideo> {
                     .set(MediaVideo::getTrans720pStatus, 3) // 3-失败
                     .eq(MediaVideo::getId, mediaVideo.getId())
                     .update();
+            }
+
+            // 处理预览视频
+            try {
+                if (video720pPath != null) {
+                    String dirPath = FaFileUtils.getAbsolutePath() + "/media/compress/" + mediaVideo.getId() + "/";
+                    FileUtil.mkdir(dirPath);
+                    String filename = mediaVideo.getOriginFilename().substring(0, mediaVideo.getOriginFilename().lastIndexOf("."));
+                    String previewPath = dirPath + filename + "_preview.mp4";
+
+                    FaMediaUtils.extractVideoPreview(video720pPath, previewPath);
+
+                    // 保存
+                    FileSave previewFile = fileSaveBiz.upload(new File(previewPath));
+                    this.lambdaUpdate()
+                        .set(MediaVideo::getPreviewFileId, previewFile.getId())
+                        .set(MediaVideo::getPreviewDuration, 10)
+                        .eq(MediaVideo::getId, mediaVideo.getId())
+                        .update();
+                }
+            } catch (Exception e) {
+                log.error(StrUtil.format("预览视频生成失败，视频ID：{}，错误信息：{}", mediaVideo.getId(), e.getMessage()), e);
+            }
+
+            // clear file
+            try {
+                String dirPath = FaFileUtils.getAbsolutePath() + "/media/compress/" + mediaVideo.getId() + "/";
+                FileUtil.del(dirPath);
+            } catch (Exception e) {
+                log.error(StrUtil.format("视频压缩临时文件清理失败，ID：{}，错误信息：{}", id, e.getMessage()), e);
             }
         });
     }
