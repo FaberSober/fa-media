@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.faber.core.annotation.FaModalName;
 import com.faber.core.annotation.SqlEquals;
-import com.faber.core.bean.BaseDelEntity;
+import com.faber.core.bean.BaseTnDelEntity;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
 import lombok.Data;
@@ -27,7 +27,7 @@ import java.math.BigDecimal;
 @TableName("media_video")
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class MediaVideo extends BaseDelEntity {
+public class MediaVideo extends BaseTnDelEntity {
 
     @ColumnWidth(8)
     @ExcelProperty("视频记录唯一ID")
